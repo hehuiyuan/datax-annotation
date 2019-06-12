@@ -32,6 +32,7 @@ public class ReaderRunner extends AbstractRunner implements Runnable {
     public void run() {
         assert null != this.recordSender;
 
+        //plugin是自定义插件中内部实现了Task的子类
         Reader.Task taskReader = (Reader.Task) this.getPlugin();
 
         //统计waitWriterTime，并且在finally才end。
@@ -54,6 +55,7 @@ public class ReaderRunner extends AbstractRunner implements Runnable {
             LOG.debug("task reader starts to read ...");
             PerfRecord dataPerfRecord = new PerfRecord(getTaskGroupId(), getTaskId(), PerfRecord.PHASE.READ_TASK_DATA);
             dataPerfRecord.start();
+            //recordSender主要方法sendToWriter
             taskReader.startRead(recordSender);
             recordSender.terminate();
 

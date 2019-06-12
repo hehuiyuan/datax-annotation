@@ -119,6 +119,7 @@ public class TaskGroupContainer extends AbstractContainer {
 
             long taskMaxWaitInMsec = this.configuration.getLong(CoreConstant.DATAX_CORE_CONTAINER_TASK_FAILOVER_MAXWAITINMSEC, 60000);
             
+            //获取改taskgroup下每个task的configuration
             List<Configuration> taskConfigs = this.configuration
                     .getListConfiguration(CoreConstant.DATAX_JOB_CONTENT);
 
@@ -127,18 +128,25 @@ public class TaskGroupContainer extends AbstractContainer {
                         JSON.toJSONString(taskConfigs));
             }
             
+            //当前taskgroup下 task的数量
             int taskCountInThisTaskGroup = taskConfigs.size();
+            //每个taskgroup下最多并行度是5即5个channel,task个数可能很多
             LOG.info(String.format(
                     "taskGroupId=[%d] start [%d] channels for [%d] tasks.",
                     this.taskGroupId, channelNumber, taskCountInThisTaskGroup));
             
             this.containerCommunicator.registerCommunication(taskConfigs);
 
-            Map<Integer, Configuration> taskConfigMap = buildTaskConfigMap(taskConfigs); //taskId与task配置
-            List<Configuration> taskQueue = buildRemainTasks(taskConfigs); //待运行task列表
-            Map<Integer, TaskExecutor> taskFailedExecutorMap = new HashMap<Integer, TaskExecutor>(); //taskId与上次失败实例
-            List<TaskExecutor> runTasks = new ArrayList<TaskExecutor>(channelNumber); //正在运行task
-            Map<Integer, Long> taskStartTimeMap = new HashMap<Integer, Long>(); //任务开始时间
+            //taskId与task配置
+            Map<Integer, Configuration> taskConfigMap = buildTaskConfigMap(taskConfigs);
+            //待运行task列表，只存放task的配置
+            List<Configuration> taskQueue = buildRemainTasks(taskConfigs);
+            //taskId与上次失败实例
+            Map<Integer, TaskExecutor> taskFailedExecutorMap = new HashMap<Integer, TaskExecutor>();
+            //正在运行task
+            List<TaskExecutor> runTasks = new ArrayList<TaskExecutor>(channelNumber);
+            //任务开始时间
+            Map<Integer, Long> taskStartTimeMap = new HashMap<Integer, Long>();
 
             long lastReportTimeStamp = 0;
             Communication lastTaskGroupContainerCommunication = new Communication();
@@ -146,6 +154,7 @@ public class TaskGroupContainer extends AbstractContainer {
             while (true) {
             	//1.判断task状态
             	boolean failedOrKilled = false;
+            	//containerCommunicators是TGContainerCommunicator，返回taskid -> Communication
             	Map<Integer, Communication> communicationMap = containerCommunicator.getCommunicationMap();
             	for(Map.Entry<Integer, Communication> entry : communicationMap.entrySet()){
             		Integer taskId = entry.getKey();
@@ -153,6 +162,7 @@ public class TaskGroupContainer extends AbstractContainer {
                     if(!taskCommunication.isFinished()){
                         continue;
                     }
+                    //运行完后从正在运行的task列表移除该taskExecutor
                     TaskExecutor taskExecutor = removeTask(runTasks, taskId);
 
                     //上面从runTasks里移除了，因此对应在monitor里移除
@@ -202,6 +212,8 @@ public class TaskGroupContainer extends AbstractContainer {
                     Configuration taskConfig = iterator.next();
                     Integer taskId = taskConfig.getInt(CoreConstant.TASK_ID);
                     int attemptCount = 1;
+                    //当前运行的task数量小于channel时候，如果待运行task列表存在task,那么取出一个task
+                    //首先从失败列表根据taskid找到相应的TaskExecutor，判断是否运行过这个task
                     TaskExecutor lastExecutor = taskFailedExecutorMap.get(taskId);
                     if(lastExecutor!=null){
                         attemptCount = lastExecutor.getAttemptCount() + 1;
@@ -224,9 +236,13 @@ public class TaskGroupContainer extends AbstractContainer {
                                     this.taskGroupId, taskId, lastExecutor.getAttemptCount());
                         }
                     }
+                    //查看最大重试次数
                     Configuration taskConfigForRun = taskMaxRetryTimes > 1 ? taskConfig.clone() : taskConfig;
+                    //根据task配置和重试次数 来 创建TaskExecutor
                 	TaskExecutor taskExecutor = new TaskExecutor(taskConfigForRun, attemptCount);
+                	//设置这个taskid对应的task开始时间
                     taskStartTimeMap.put(taskId, System.currentTimeMillis());
+                    //开始任务
                 	taskExecutor.doStart();
 
                     iterator.remove();
@@ -479,6 +495,7 @@ public class TaskGroupContainer extends AbstractContainer {
 
                     RecordSender recordSender;
                     if (transformerInfoExecs != null && transformerInfoExecs.size() > 0) {
+                        //存在转换函数要应用到record上
                         recordSender = new BufferedRecordTransformerExchanger(taskGroupId, this.taskId, this.channel,this.taskCommunication ,pluginCollector, transformerInfoExecs);
                     } else {
                         recordSender = new BufferedRecordExchanger(this.channel, pluginCollector);

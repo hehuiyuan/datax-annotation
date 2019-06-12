@@ -28,6 +28,7 @@ public class TransformerUtil {
         List<TransformerExecution> result = new ArrayList<TransformerExecution>();
 
 
+        //如果存在transformer，functionNames用来存放function名字的
         List<String> functionNames = new ArrayList<String>();
 
 
@@ -45,6 +46,7 @@ public class TransformerUtil {
 
         /**
          * 延迟load 第三方插件的function，并按需load
+         * DATAX_HOME/local_storage/transformer/下面寻找transformer
          */
         LOG.info(String.format(" user config tranformers [%s], loading...", functionNames));
         TransformerRegistry.loadTransformerFromLocalStorage(functionNames);
@@ -53,6 +55,7 @@ public class TransformerUtil {
 
         for (Configuration configuration : tfConfigs) {
             String functionName = configuration.getString("name");
+            //根据函数名字得到相应的transformerInfo
             TransformerInfo transformerInfo = TransformerRegistry.getTransformer(functionName);
             if (transformerInfo == null) {
                 throw DataXException.asDataXException(TransformerErrorCode.TRANSFORMER_NOTFOUND_ERROR, "name=" + functionName);
@@ -91,6 +94,7 @@ public class TransformerUtil {
             }
             transformerExecutionParas.settContext(configuration.getMap(CoreConstant.TRANSFORMER_PARAMETER_CONTEXT));
 
+            //创建TransformerExecution
             TransformerExecution transformerExecution = new TransformerExecution(transformerInfo, transformerExecutionParas);
 
             transformerExecution.genFinalParas();

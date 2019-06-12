@@ -74,6 +74,9 @@ public class MemoryChannel extends Channel {
 			long startTime = System.nanoTime();
 			lock.lockInterruptibly();
 			int bytes = getRecordBytes(rs);
+			//当前内存字节+要push的所有数据的字节数 大于 默认值8M
+			// 或者
+			//当前queue（默认值2048）的空闲空间无法存放当前push的数据的数量，那么循环等待
 			while (memoryBytes.get() + bytes > this.byteCapacity || rs.size() > this.queue.remainingCapacity()) {
 				notInsufficient.await(200L, TimeUnit.MILLISECONDS);
             }

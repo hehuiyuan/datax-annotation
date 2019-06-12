@@ -26,6 +26,7 @@ public abstract class TransformerExchanger {
     protected final int taskId;
     protected final Communication currentCommunication;
 
+    //记录所有的函数在record上应用的总时间
     private long totalExaustedTime = 0;
     private long totalFilterRecords = 0;
     private long totalSuccessRecords = 0;
@@ -55,6 +56,7 @@ public abstract class TransformerExchanger {
             return record;
         }
 
+        //转换后的record
         Record result = record;
 
         long diffExaustedTime = 0;
@@ -64,6 +66,7 @@ public abstract class TransformerExchanger {
             long startTs = System.nanoTime();
 
             if (transformerInfoExec.getClassLoader() != null) {
+                //获取当前TransformerExecution中的TransformerInfo对象的classloader
                 classLoaderSwapper.setCurrentThreadClassLoader(transformerInfoExec.getClassLoader());
             }
 
@@ -83,6 +86,8 @@ public abstract class TransformerExchanger {
             }
 
             try {
+                //TransformerExecution【TransformerInfo【classLoader,ComplexTransformer,isNative】,TransformerExecutionParas】
+                //getFinalParas是一个Object[],Object[0]是columnIndex, Object[1]...是存放的具体参数
                 result = transformerInfoExec.getTransformer().evaluate(result, transformerInfoExec.gettContext(), transformerInfoExec.getFinalParas());
             } catch (Exception e) {
                 errorMsg = String.format("transformer(%s) has Exception(%s)", transformerInfoExec.getTransformerName(),

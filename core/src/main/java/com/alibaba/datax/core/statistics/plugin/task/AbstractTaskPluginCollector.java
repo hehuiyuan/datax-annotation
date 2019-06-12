@@ -58,6 +58,7 @@ public abstract class AbstractTaskPluginCollector extends TaskPluginCollector {
             return;
         }
 
+        //communication的Map变量counter中记录着所有记录统计结果，例如 读失败记录个数 读成功记录个数等等
         if (this.pluginType.equals(PluginType.READER)) {
             this.communication.increaseCounter(
                     CommunicationTool.READ_FAILED_RECORDS, 1);

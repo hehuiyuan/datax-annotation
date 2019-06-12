@@ -52,13 +52,16 @@ public final class JobAssignUtil {
         List<Configuration> taskGroupConfig = doAssign(resourceMarkAndTaskIdMap, configuration, taskGroupNumber);
 
         // 调整 每个 taskGroup 对应的 Channel 个数（属于优化范畴）
+        //均衡每个taskgroup中channel的个数，比如channel=6 那么需要两个taskgroup ,taskgroup默认channel是5，优化后可以使得每一个taskgroup有3个channel
         adjustChannelNumPerTaskGroup(taskGroupConfig, channelNumber);
         return taskGroupConfig;
     }
 
     private static void adjustChannelNumPerTaskGroup(List<Configuration> taskGroupConfig, int channelNumber) {
         int taskGroupNumber = taskGroupConfig.size();
+        //channel个数 / taskgroup个数 表示平均每个taskgroup有几个channel,这个不一定是整除情况
         int avgChannelsPerTaskGroup = channelNumber / taskGroupNumber;
+        //因此进一步取余数比如为n吧，然后分别为n个taskgroup在平均channel情况下多增加一个channel
         int remainderChannelCount = channelNumber % taskGroupNumber;
         // 表示有 remainderChannelCount 个 taskGroup,其对应 Channel 个数应该为：avgChannelsPerTaskGroup + 1；
         // （taskGroupNumber - remainderChannelCount）个 taskGroup,其对应 Channel 个数应该为：avgChannelsPerTaskGroup

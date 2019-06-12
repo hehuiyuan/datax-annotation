@@ -22,10 +22,13 @@ public abstract class ProcessInnerScheduler extends AbstractScheduler {
 
     @Override
     public void startAllTaskGroup(List<Configuration> configurations) {
+        //创建一个固定大小的线程池，大小为taskgroup的个数
         this.taskGroupContainerExecutorService = Executors
                 .newFixedThreadPool(configurations.size());
 
         for (Configuration taskGroupConfiguration : configurations) {
+            //TaskGroupContainerRunner里面封装了TaskGroupContainer，每个group创建了一个task
+            //TaskGroupContainerRunner是一个runnable,其run方法调用的是TaskGroupContainer的start方法
             TaskGroupContainerRunner taskGroupContainerRunner = newTaskGroupContainerRunner(taskGroupConfiguration);
             this.taskGroupContainerExecutorService.execute(taskGroupContainerRunner);
         }

@@ -67,6 +67,8 @@ public class TransformerRegistry {
         String transformerPath = CoreConstant.DATAX_STORAGE_TRANSFORMER_HOME + File.separator + each;
         Configuration transformerConfiguration;
         try {
+            //从dataxhome/local_storage/transformer/transformername/下的json文件加载
+            //json文件保存了插件名称以及指向的类的全限路径
             transformerConfiguration = loadTransFormerConfig(transformerPath);
         } catch (Exception e) {
             LOG.error(String.format("skip transformer(%s),load transformer.json error, path = %s, ", each, transformerPath), e);
@@ -83,18 +85,24 @@ public class TransformerRegistry {
         if (!each.equals(funName)) {
             LOG.warn(String.format("transformer(%s) name not match transformer.json config name[%s], will ignore json's name, path = %s, config = %s", each, funName, transformerPath, transformerConfiguration.beautify()));
         }
+        //JarLoader 继承了 java.net.URLClassLoader
         JarLoader jarLoader = new JarLoader(new String[]{transformerPath});
 
         try {
             Class<?> transformerClass = jarLoader.loadClass(className);
             Object transformer = transformerClass.newInstance();
             if (ComplexTransformer.class.isAssignableFrom(transformer.getClass())) {
+                //检查加载的函数对应的类是否实现了ComplexTransformer类，如果是设置其父类的transformerName变量值为这个函数的名字
                 ((ComplexTransformer) transformer).setTransformerName(each);
+                //根据这几个参数构建TransformerInfo，然后将这个函数对应的TransformerInfo对象存放到registedTransformer中 （funName -> TransformerInfo对象）
+                //后面会根据函数名字获得TransformerInfo实例，然后去构建TransformerExecution对象
                 registComplexTransformer((ComplexTransformer) transformer, jarLoader, false);
             } else if (Transformer.class.isAssignableFrom(transformer.getClass())) {
+                //检查加载的函数对应的类是否是Transformer的子类
                 ((Transformer) transformer).setTransformerName(each);
                 registTransformer((Transformer) transformer, jarLoader, false);
             } else {
+                //如果都不是，那么这个函数对应的类不合法
                 LOG.error(String.format("load Transformer class(%s) error, path = %s", className, transformerPath));
             }
         } catch (Exception e) {

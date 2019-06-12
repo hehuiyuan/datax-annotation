@@ -390,6 +390,7 @@ public class JobContainer extends AbstractContainer {
             this.needChannelNumber = 1;
         }
 
+        //调用reader.job的split方法，writer划分task个数与reader一致
         List<Configuration> readerTaskConfigs = this
                 .doReaderSplit(this.needChannelNumber);
         int taskNumber = readerTaskConfigs.size();
@@ -420,6 +421,7 @@ public class JobContainer extends AbstractContainer {
         boolean isByteLimit = (this.configuration.getInt(
                 CoreConstant.DATAX_JOB_SETTING_SPEED_BYTE, 0) > 0);
         if (isByteLimit) {
+            //存在字节限速情况，这是一个global级别的字节限速
             long globalLimitedByteSpeed = this.configuration.getInt(
                     CoreConstant.DATAX_JOB_SETTING_SPEED_BYTE, 10 * 1024 * 1024);
 
@@ -432,6 +434,7 @@ public class JobContainer extends AbstractContainer {
                         "在有总bps限速条件下，单个channel的bps值不能为空，也不能为非正数");
             }
 
+            //根据字节流控求通道个数
             needChannelNumberByByte =
                     (int) (globalLimitedByteSpeed / channelLimitedByteSpeed);
             needChannelNumberByByte =
@@ -452,6 +455,7 @@ public class JobContainer extends AbstractContainer {
                         "在有总tps限速条件下，单个channel的tps值不能为空，也不能为非正数");
             }
 
+            //根据记录流控求通道个数
             needChannelNumberByRecord =
                     (int) (globalLimitedRecordSpeed / channelLimitedRecordSpeed);
             needChannelNumberByRecord =
@@ -459,7 +463,7 @@ public class JobContainer extends AbstractContainer {
             LOG.info("Job set Max-Record-Speed to " + globalLimitedRecordSpeed + " records.");
         }
 
-        // 取较小值
+        // 取较小值，取 字节流控 与 记录流控 求得的通道个数的最小值
         this.needChannelNumber = needChannelNumberByByte < needChannelNumberByRecord ?
                 needChannelNumberByByte : needChannelNumberByRecord;
 
@@ -492,9 +496,11 @@ public class JobContainer extends AbstractContainer {
     private void schedule() {
         /**
          * 这里的全局speed和每个channel的速度设置为B/s
+         * 这个是每个taskgroup中的并行度
          */
         int channelsPerTaskGroup = this.configuration.getInt(
                 CoreConstant.DATAX_CORE_CONTAINER_TASKGROUP_CHANNEL, 5);
+        //TODO ？？taskgroup的个数如何确定？
         int taskNumber = this.configuration.getList(
                 CoreConstant.DATAX_JOB_CONTENT).size();
 
@@ -505,6 +511,8 @@ public class JobContainer extends AbstractContainer {
          * 通过获取配置信息得到每个taskGroup需要运行哪些tasks任务
          */
 
+        //公平分配channel到taskgroup中，比如channel为6，有两个taskgroup，避免出现一个5个channel一个1个channel
+        //优化后可以每个taskgroup有3个channel，channel是并行度含义，不代表有3个task
         List<Configuration> taskGroupConfigs = JobAssignUtil.assignFairly(this.configuration,
                 this.needChannelNumber, channelsPerTaskGroup);
 
@@ -729,6 +737,8 @@ public class JobContainer extends AbstractContainer {
     private List<Configuration> doReaderSplit(int adviceNumber) {
         classLoaderSwapper.setCurrentThreadClassLoader(LoadUtil.getJarLoader(
                 PluginType.READER, this.readerPluginName));
+
+        //根据channel个数分别克隆一份配置
         List<Configuration> readerSlicesConfigs =
                 this.jobReader.split(adviceNumber);
         if (readerSlicesConfigs == null || readerSlicesConfigs.size() <= 0) {

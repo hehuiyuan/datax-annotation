@@ -19,7 +19,8 @@ public class TaskGroupContainerRunner implements Runnable {
 	@Override
 	public void run() {
 		try {
-            Thread.currentThread().setName(
+            //利用当前taskgroupid设置当前线程名字
+			Thread.currentThread().setName(
                     String.format("taskGroup-%d", this.taskGroupContainer.getTaskGroupId()));
             this.taskGroupContainer.start();
 			this.state = State.SUCCEEDED;

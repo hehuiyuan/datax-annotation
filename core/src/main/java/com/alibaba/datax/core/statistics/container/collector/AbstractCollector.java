@@ -29,6 +29,7 @@ public abstract class AbstractCollector {
         for (Configuration config : taskGroupConfigurationList) {
             int taskGroupId = config.getInt(
                     CoreConstant.DATAX_CORE_CONTAINER_TASKGROUP_ID);
+            //保存每个  taskgroupid->Communication 到map中
             LocalTGCommunicationManager.registerTaskGroupCommunication(taskGroupId, new Communication());
         }
     }

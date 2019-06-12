@@ -53,6 +53,7 @@ public class WriterRunner extends AbstractRunner implements Runnable {
 
             PerfRecord dataPerfRecord = new PerfRecord(getTaskGroupId(), getTaskId(), PerfRecord.PHASE.WRITE_TASK_DATA);
             dataPerfRecord.start();
+            //recordReceiver主要方法getFromReader
             taskWriter.startWrite(recordReceiver);
 
             dataPerfRecord.addCount(CommunicationTool.getTotalReadRecords(super.getRunnerCommunication()));

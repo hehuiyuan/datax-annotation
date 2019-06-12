@@ -82,13 +82,16 @@ public class BufferedRecordTransformerExchanger extends TransformerExchanger imp
     }
 
     @Override
+    //发送到writer过程
     public void sendToWriter(Record record) {
         if (shutdown) {
             throw DataXException.asDataXException(CommonErrorCode.SHUT_DOWN_TASK, "");
         }
 
+        //commons-lang包里面的
         Validate.notNull(record, "record不能为空.");
 
+        //封装在transformerExecs中的每一个函数应用到record上，得到应用每个函数后的结果
         record = doTransformer(record);
 
         if(record == null){
@@ -96,12 +99,17 @@ public class BufferedRecordTransformerExchanger extends TransformerExchanger imp
         }
 
         if (record.getMemorySize() > this.byteCapacity) {
+            //byteCapacity默认8M，这个会记录到communication的counter中
+            //record==null 那么log.warn一下即可，如果是reader时候发生的那么读失败记录数加1，如果是writer时候发生的那么写失败记录个数加1
+            //不仅写失败记录数 读失败记录数更新 ，这条记录的字节数也会相应加到统计读失败字节，写失败字节的变量上
             this.pluginCollector.collectDirtyRecord(record, new Exception(String.format("单条记录超过大小限制，当前限制为:%s", this.byteCapacity)));
             return;
         }
 
         boolean isFull = (this.bufferIndex >= this.bufferSize || this.memoryBytes.get() + record.getMemorySize() > this.byteCapacity);
+        //存放记录的list满了 或者 存放的记录的字节数超过了默认值8M 就flush一波
         if (isFull) {
+            //flush时候当前buffer会清空，bufferindex=1，memoryBytes=0,buffer数据写到了memorychannel的queue中
             flush();
         }
 
@@ -137,11 +145,15 @@ public class BufferedRecordTransformerExchanger extends TransformerExchanger imp
         if (shutdown) {
             throw DataXException.asDataXException(CommonErrorCode.SHUT_DOWN_TASK, "");
         }
+        //TODO 什么意思？bufferIndex不是一直大于等于buffer的size吗？
+        //bufferSize是这个buffer的总大小，buffer.size是当前使用的大小
         boolean isEmpty = (this.bufferIndex >= this.buffer.size());
         if (isEmpty) {
+            //如果buffer为空，那么从arrayblockqueue里面取出数据到buffer中，执行receive后bufferIndex=0,buffer.size>=0，buffersize=buffer.size
             receive();
         }
 
+        //从buffer中拿数据时候，bufferIndex自增，因此当拿到最后一个时候，bufferIndex会大于等于buffersize,也就是buffer空了
         Record record = this.buffer.get(this.bufferIndex++);
         if (record instanceof TerminateRecord) {
             record = null;
@@ -161,6 +173,7 @@ public class BufferedRecordTransformerExchanger extends TransformerExchanger imp
     }
 
     private void receive() {
+        //从memorychannel中的queue中取出数据放到当前buffer中，bufferIndex重置为0，buffersize为当前buffer的大小
         this.channel.pullAll(this.buffer);
         this.bufferIndex = 0;
         this.bufferSize = this.buffer.size();

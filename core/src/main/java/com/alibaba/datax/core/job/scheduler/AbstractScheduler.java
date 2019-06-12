@@ -48,9 +48,15 @@ public abstract class AbstractScheduler {
 
         /**
          * 给 taskGroupContainer 的 Communication 注册
+         *
+         * 其实就是把 taskgroupid -> Communication 保存到Map
+         *
+         * containerCommunicato：StandaloneTGContainerCommunicator
          */
         this.containerCommunicator.registerCommunication(configurations);
 
+        //configurations是taskgroup的 每个taskgroup对应一个configuration
+        //但是每个taskgroup的configuration中 存在DATAX_JOB_CONTENT参数 记录着这个group的task数量（包含reader和writer总共的）
         int totalTasks = calculateTaskCount(configurations);
         startAllTaskGroup(configurations);
 

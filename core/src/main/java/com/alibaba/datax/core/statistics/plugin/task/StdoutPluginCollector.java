@@ -61,6 +61,7 @@ public class StdoutPluginCollector extends AbstractTaskPluginCollector {
     public void collectDirtyRecord(Record dirtyRecord, Throwable t,
                                    String errorMessage) {
         int logNum = currentLogNum.getAndIncrement();
+        //第一次肯定==0
         if(logNum==0 && t!=null){
             LOG.error("", t);
         }

@@ -172,6 +172,7 @@ public class StreamReader extends Reader {
 		}
 
 		@Override
+		//adviceNumber=设置的channel数量
 		public List<Configuration> split(int adviceNumber) {
 			List<Configuration> configurations = new ArrayList<Configuration>();
 
@@ -220,11 +221,13 @@ public class StreamReader extends Reader {
 
 		@Override
 		public void startRead(RecordSender recordSender) {
+			//构建一条记录
 			Record oneRecord = buildOneRecord(recordSender, this.columns);
 			while (this.sliceRecordCount > 0) {
                 if (this.haveMixupFunction) {
                     oneRecord = buildOneRecord(recordSender, this.columns);
                 }
+                //写到list类型的buffer中，然后如果buffer满了或者已经写到buffer中记录的总字节数达到阈值（8M）那么直接flush到arrayblockingqueue中
 				recordSender.sendToWriter(oneRecord);
 				this.sliceRecordCount--;
 			}
@@ -318,10 +321,12 @@ public class StreamReader extends Reader {
 						"参数[column]不能为空.");
 			}
 
+			//加载相应的Record类
 			Record record = recordSender.createRecord();
 			try {
 				for (String eachColumn : columns) {
 					Configuration eachColumnConfig = Configuration.from(eachColumn);
+					//构建每一个字段，然后存放到record中
 					record.addColumn(this.buildOneColumn(eachColumnConfig));
 				}
 			} catch (Exception e) {

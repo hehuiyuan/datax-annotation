@@ -147,7 +147,9 @@ public abstract class Channel {
 
     public void pullAll(final Collection<Record> rs) {
         Validate.notNull(rs);
+        //从queue中移除指定大小（当前channel中的buffersize）的数据到rs中
         this.doPullAll(rs);
+        //更新统计信息
         this.statPull(rs.size(), this.getByteSize(rs));
     }
 
